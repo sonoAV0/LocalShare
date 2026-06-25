@@ -5,7 +5,10 @@ import avogadri.marco.localshare.data.local.DeviceIdProvider
 import avogadri.marco.localshare.data.local.db.LocalShareDatabase
 import avogadri.marco.localshare.data.repository.DeviceRepository
 import avogadri.marco.localshare.data.repository.FakeDeviceRepository
+import avogadri.marco.localshare.data.p2p.IncomingTransferWatcher
 import avogadri.marco.localshare.data.p2p.P2pManager
+import avogadri.marco.localshare.data.p2p.SocketTransferManager
+import avogadri.marco.localshare.data.p2p.TransferManager
 import avogadri.marco.localshare.data.p2p.WifiDirectP2pManager
 import avogadri.marco.localshare.data.repository.HistoryRepository
 import avogadri.marco.localshare.data.repository.LocalHistoryRepository
@@ -27,4 +30,6 @@ object AppContainer {
     val historyRepository: HistoryRepository by lazy { LocalHistoryRepository(database.historyDao()) }
 
     val p2pManager: P2pManager by lazy { WifiDirectP2pManager(appContext) }
+    val transferManager: TransferManager by lazy { SocketTransferManager(appContext) }
+    val incomingTransferWatcher: IncomingTransferWatcher by lazy { IncomingTransferWatcher(appContext, p2pManager) }
 }

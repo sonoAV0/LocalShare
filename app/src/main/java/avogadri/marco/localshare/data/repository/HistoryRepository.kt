@@ -18,9 +18,13 @@ interface HistoryRepository {
 }
 
 /**
- * Local-only for now: every transfer is persisted on-device via Room.
- * A future revision will also push entries to the Flask backend from here,
- * keeping ViewModels unaware of where the data actually lives.
+ * Repository locale in Android Room che implementa [HistoryRepository].
+ *
+ * Il metodo [observeHistory] ritorna un flow di history entry ordinate dalla più recente.
+ *
+ * Il metodo [recordTransfer] inserisce una nuova entry nella tabella history
+ *
+ * @param historyDao Dao relativo alla tabella history
  */
 class LocalHistoryRepository(private val historyDao: HistoryDao) : HistoryRepository {
     override fun observeHistory(): Flow<List<HistoryEntity>> = historyDao.observeAll()

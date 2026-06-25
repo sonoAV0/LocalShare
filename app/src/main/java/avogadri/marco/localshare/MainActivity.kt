@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppContainer.init(this)
+        AppContainer.incomingTransferWatcher.start()
         enableEdgeToEdge()
         setContent {
             LocalShareTheme {

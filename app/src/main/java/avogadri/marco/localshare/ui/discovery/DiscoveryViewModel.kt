@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import avogadri.marco.localshare.data.p2p.P2pManager
 import avogadri.marco.localshare.data.p2p.PeerDevice
+import avogadri.marco.localshare.data.p2p.TransferSessionState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,4 +33,9 @@ class DiscoveryViewModel(private val p2pManager: P2pManager) : ViewModel() {
         super.onCleared()
         p2pManager.stopDiscovery()
     }
+
+    /**
+     * Metodo che controlla che una transazione non sia già in corso
+     */
+    fun canStartTransfer(): Boolean = !TransferSessionState.isTransferring.get()
 }

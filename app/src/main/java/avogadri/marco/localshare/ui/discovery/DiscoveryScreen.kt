@@ -1,5 +1,10 @@
 package avogadri.marco.localshare.ui.discovery
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,8 +30,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +43,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import avogadri.marco.localshare.data.AppContainer
 import avogadri.marco.localshare.data.p2p.PeerDevice
+import avogadri.marco.localshare.service.TransferForegroundService
 
 @Composable
 fun DiscoveryScreen(
@@ -41,6 +51,17 @@ fun DiscoveryScreen(
     viewModel: DiscoveryViewModel = viewModel(factory = DiscoveryViewModelFactory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var pendingPeer by remember { mutableStateOf<PeerDevice?>(null) }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val peer = pendingPeer
+        pendingPeer = null
+        if (uri != null && peer != null) {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            TransferForegroundService.startSend(context, peer, uri)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -71,7 +92,23 @@ fun DiscoveryScreen(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(uiState.peers) { peer ->
-                    PeerCard(peer = peer, modifier = Modifier.fillMaxWidth())
+                    PeerCard(
+                        peer = peer,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            // controllo che una transazione non sia ancora in corso
+                            if (viewModel.canStartTransfer()) {
+                                pendingPeer = peer
+                                filePicker.launch(arrayOf("*/*"))
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Trasferimento già in corso, attendi il completamento",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        },
+                    )
                 }
             }
         }
@@ -115,11 +152,11 @@ private fun EmptyPeersCard() {
 }
 
 @Composable
-private fun PeerCard(peer: PeerDevice, modifier: Modifier = Modifier) {
+private fun PeerCard(peer: PeerDevice, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

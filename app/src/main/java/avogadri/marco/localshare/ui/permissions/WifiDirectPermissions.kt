@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 val WIFI_DIRECT_PERMISSIONS = arrayOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
     Manifest.permission.NEARBY_WIFI_DEVICES,
+    Manifest.permission.POST_NOTIFICATIONS,
 )
 
 private fun hasWifiDirectPermissions(context: Context): Boolean =
