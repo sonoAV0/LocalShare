@@ -74,7 +74,7 @@ class TransferForegroundService : Service() {
                 )
                 updateNotification("Invio completato: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification("Invio fallito")
+                updateNotification(e.message.toString())
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 AppContainer.p2pManager.disconnect() // chiusura del gruppo
@@ -104,7 +104,7 @@ class TransferForegroundService : Service() {
                 )
                 updateNotification("Ricevuto: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification("Ricezione fallita")
+                updateNotification(e.message.toString())
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 stopForeground(STOP_FOREGROUND_DETACH)
