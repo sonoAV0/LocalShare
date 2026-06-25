@@ -1,6 +1,8 @@
 package avogadri.marco.localshare.data.p2p
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.net.Uri
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +36,8 @@ class SocketTransferManager(private val context: Context) : TransferManager {
         withContext(Dispatchers.IO) {
             openTransferSocket(connectionInfo).use { socket ->
                 val fileName = queryFileName(fileUri) ?: "file"
-                val sizeBytes = context.contentResolver.openAssetFileDescriptor(fileUri, "r")?.length ?: -1L // ottiene la dimensione del file senza leggerlo
+                // ottiene la dimensione del file senza leggerlo
+                val sizeBytes = context.contentResolver.openAssetFileDescriptor(fileUri, "r")?.use { it.length } ?: -1L
 
                 val output = DataOutputStream(socket.outputStream)
                 output.writeUTF(fileName)
@@ -66,9 +69,20 @@ class SocketTransferManager(private val context: Context) : TransferManager {
             ServerSocket(TRANSFER_PORT).use { it.accept() }
         } else {
             Socket().apply {
+                // lega il socket alla rete Wi-Fi Direct, altrimenti il sistema instrada la
+                // connessione sulla rete di default (es. dati mobili) e il connect va in timeout
+                findP2pNetwork()?.bindSocket(this)
                 connect(InetSocketAddress(connectionInfo.groupOwnerAddress, TRANSFER_PORT), SOCKET_TIMEOUT_MILLIS)
             }
         }
+
+    // individua, tra tutte le rete attive, quella corrispondente all'interfaccia Wi-Fi Direct
+    private fun findP2pNetwork(): Network? {
+        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+        return connectivityManager.allNetworks.firstOrNull { network ->
+            connectivityManager.getLinkProperties(network)?.interfaceName?.contains("p2p") == true
+        }
+    }
 
     // Metodo che interroga il contentResolver per ottenere il display_name del file
     private fun queryFileName(uri: Uri): String? {
