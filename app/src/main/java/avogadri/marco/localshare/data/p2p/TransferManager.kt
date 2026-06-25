@@ -66,7 +66,11 @@ class SocketTransferManager(private val context: Context) : TransferManager {
     // apre il socket gestendo il caso in cui il peer sia il server o il client
     private fun openTransferSocket(connectionInfo: P2pConnectionInfo): Socket =
         if (connectionInfo.isGroupOwner) {
-            ServerSocket(TRANSFER_PORT).use { it.accept() }
+            ServerSocket().apply {
+                reuseAddress = true // flag che permette di fare un secondo trasferimento immediatamente dopo il primo
+                soTimeout = SOCKET_TIMEOUT_MILLIS // timeout che evita attesa infinita
+                bind(InetSocketAddress(TRANSFER_PORT))
+            }.use { it.accept() }
         } else {
             Socket().apply {
                 // lega il socket alla rete Wi-Fi Direct, altrimenti il sistema instrada la
