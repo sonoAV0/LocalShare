@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import avogadri.marco.localshare.ui.discovery.DiscoveryScreen
+import avogadri.marco.localshare.ui.history.HistoryScreen
 import avogadri.marco.localshare.ui.home.HomeScreen
 
 @Composable
@@ -14,10 +15,16 @@ fun NavGraph(navController: NavHostController = rememberNavController()) {
         composable(Screen.Home.route) {
             HomeScreen(
                 onStartTransfer = { navController.navigate(Screen.Discovery.route) },
+                onOpenHistory = { navController.navigate(Screen.History.route) },
             )
         }
         composable(Screen.Discovery.route) {
             DiscoveryScreen(
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Screen.History.route) {
+            HistoryScreen(
                 onBack = { navController.popBackStack() },
             )
         }

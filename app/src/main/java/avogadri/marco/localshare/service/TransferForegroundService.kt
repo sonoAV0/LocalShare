@@ -1,11 +1,13 @@
 package avogadri.marco.localshare.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.location.LocationManager
 import android.net.Uri
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -66,15 +68,18 @@ class TransferForegroundService : Service() {
                 val connectionInfo = AppContainer.p2pManager.observeConnectionInfo().filterNotNull().first()
                 updateNotification("Invio in corso a ${peer.name}…")
                 val result = AppContainer.transferManager.sendFile(connectionInfo, fileUri)
+                val (lat, lon) = getLastLocation() ?: (null to null)
                 AppContainer.historyRepository.recordTransfer(
                     peerDeviceId = peer.address,
                     fileName = result.fileName,
                     sizeBytes = result.sizeBytes,
                     direction = TransferDirection.SENT,
+                    latitude = lat,
+                    longitude = lon,
                 )
                 updateNotification("Invio completato: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification(e.message.toString())
+                updateNotification("Errore durante la condivisione del file")
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 AppContainer.p2pManager.disconnect() // chiusura del gruppo
@@ -96,15 +101,18 @@ class TransferForegroundService : Service() {
         serviceScope.launch {
             try {
                 val result = AppContainer.transferManager.receiveFile(connectionInfo)
+                val (lat, lon) = getLastLocation() ?: (null to null)
                 AppContainer.historyRepository.recordTransfer(
                     peerDeviceId = connectionInfo.groupOwnerAddress,
                     fileName = result.fileName,
                     sizeBytes = result.sizeBytes,
                     direction = TransferDirection.RECEIVED,
+                    latitude = lat,
+                    longitude = lon,
                 )
                 updateNotification("Ricevuto: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification(e.message.toString())
+                updateNotification("Errore durante la condivisione del file")
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 stopForeground(STOP_FOREGROUND_DETACH)
@@ -126,6 +134,15 @@ class TransferForegroundService : Service() {
 
     private fun updateNotification(text: String) {
         getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation(): Pair<Double, Double>? {
+        val lm = getSystemService(LocationManager::class.java)
+        return listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            .firstNotNullOfOrNull { provider ->
+                runCatching { lm.getLastKnownLocation(provider) }.getOrNull()
+            }?.let { it.latitude to it.longitude }
     }
 
     // Alla distruzione del service, cancella anche tutte le coroutine in corso nel serviceScope

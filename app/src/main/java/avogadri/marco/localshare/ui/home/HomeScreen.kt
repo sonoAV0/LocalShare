@@ -63,9 +63,13 @@ fun HomeScreen(
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.Top,
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(56.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             LocalShareLogo(size = 36.dp)
             Spacer(modifier = Modifier.width(10.dp))
             Text(
