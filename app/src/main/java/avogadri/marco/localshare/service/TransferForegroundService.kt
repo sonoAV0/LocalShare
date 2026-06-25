@@ -7,10 +7,19 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.net.Uri
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
+import androidx.core.location.LocationListenerCompat
+import androidx.core.location.LocationManagerCompat
+import androidx.core.location.LocationRequestCompat
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.resume
 import avogadri.marco.localshare.data.AppContainer
 import avogadri.marco.localshare.data.local.db.TransferDirection
 import avogadri.marco.localshare.data.p2p.P2pConnectionInfo
@@ -22,6 +31,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Esegue connessione P2P + trasferimento file fuori dal ciclo di vita di Activity/ViewModel,
@@ -68,7 +78,7 @@ class TransferForegroundService : Service() {
                 val connectionInfo = AppContainer.p2pManager.observeConnectionInfo().filterNotNull().first()
                 updateNotification("Invio in corso a ${peer.name}…")
                 val result = AppContainer.transferManager.sendFile(connectionInfo, fileUri)
-                val (lat, lon) = getLastLocation() ?: (null to null)
+                val (lat, lon) = getLocation() ?: (null to null)
                 AppContainer.historyRepository.recordTransfer(
                     peerDeviceId = peer.address,
                     fileName = result.fileName,
@@ -101,7 +111,7 @@ class TransferForegroundService : Service() {
         serviceScope.launch {
             try {
                 val result = AppContainer.transferManager.receiveFile(connectionInfo)
-                val (lat, lon) = getLastLocation() ?: (null to null)
+                val (lat, lon) = getLocation() ?: (null to null)
                 AppContainer.historyRepository.recordTransfer(
                     peerDeviceId = connectionInfo.groupOwnerAddress,
                     fileName = result.fileName,
@@ -137,12 +147,40 @@ class TransferForegroundService : Service() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun getLastLocation(): Pair<Double, Double>? {
+    private suspend fun getLocation(): Pair<Double, Double>? {
         val lm = getSystemService(LocationManager::class.java)
-        return listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-            .firstNotNullOfOrNull { provider ->
-                runCatching { lm.getLastKnownLocation(provider) }.getOrNull()
-            }?.let { it.latitude to it.longitude }
+
+        // tentativo di prendere l'ultima location in cache
+        val lastKnown = listOf(
+            LocationManager.FUSED_PROVIDER,
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.GPS_PROVIDER,
+        ).firstNotNullOfOrNull { provider ->
+            runCatching { lm.getLastKnownLocation(provider) }.getOrNull()
+        }
+        if (lastKnown != null) return lastKnown.latitude to lastKnown.longitude
+
+        // calcola un nuovo valore in caso nessuno sia in cache
+        return withTimeoutOrNull(5_000.milliseconds) {
+            suspendCancellableCoroutine { cont ->
+                val provider = listOf(
+                    LocationManager.FUSED_PROVIDER,
+                    LocationManager.NETWORK_PROVIDER,
+                    LocationManager.GPS_PROVIDER,
+                ).firstOrNull { lm.isProviderEnabled(it) }
+                    ?: run { cont.resume(null); return@suspendCancellableCoroutine }
+
+                val request = LocationRequestCompat.Builder(Long.MAX_VALUE)
+                    .setQuality(LocationRequestCompat.QUALITY_BALANCED_POWER_ACCURACY)
+                    .setMaxUpdates(1)
+                    .build()
+                val listener = LocationListenerCompat { loc ->
+                    cont.resume(loc.latitude to loc.longitude)
+                }
+                LocationManagerCompat.requestLocationUpdates(lm, provider, request, listener, Looper.getMainLooper())
+                cont.invokeOnCancellation { lm.removeUpdates(listener) }
+            }
+        }
     }
 
     // Alla distruzione del service, cancella anche tutte le coroutine in corso nel serviceScope
