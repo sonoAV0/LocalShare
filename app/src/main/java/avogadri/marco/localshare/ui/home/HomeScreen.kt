@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +52,7 @@ import avogadri.marco.localshare.ui.permissions.rememberWifiDirectPermissionRequ
 fun HomeScreen(
     onStartTransfer: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -136,13 +138,23 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Collegamento alla history
-        HomeActionCard(
-            icon = Icons.Outlined.History,
-            label = "History",
-            onClick = onOpenHistory,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HomeActionCard(
+                icon = Icons.Outlined.History,
+                label = "History",
+                onClick = onOpenHistory,
+                modifier = Modifier.weight(1f),
+            )
+            HomeActionCard(
+                icon = Icons.Outlined.Settings,
+                label = "Settings",
+                onClick = onOpenSettings,
+                modifier = Modifier.weight(1f),
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
     }

@@ -1,0 +1,23 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: localshare
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/localshare
+      - JWT_SECRET_KEY=change-me-in-production
+      - FLASK_ENV=development
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:

@@ -21,13 +21,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +46,6 @@ import avogadri.marco.localshare.service.TransferForegroundService
 
 @Composable
 fun DiscoveryScreen(
-    onBack: () -> Unit = {},
     viewModel: DiscoveryViewModel = viewModel(factory = DiscoveryViewModelFactory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -68,22 +66,14 @@ fun DiscoveryScreen(
             .fillMaxSize()
             .padding(horizontal = 24.dp),
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(56.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = "Nearby devices",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-        }
+        Text(
+            text = "Nearby devices",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
 
         Spacer(modifier = Modifier.height(20.dp))
 

@@ -7,17 +7,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HistoryDao {
-    /**
-     * Inserisce una nuova entry nella tabella history
-     *
-     * @param entry Entità inserita
-     */
+
     @Insert
     suspend fun insert(entry: HistoryEntity)
 
-    /**
-     * Prende tutte le entry della tabella history ordinate dalla più recente
-     */
     @Query("SELECT * FROM history ORDER BY timestampMillis DESC")
     fun observeAll(): Flow<List<HistoryEntity>>
+
+    @Query("SELECT * FROM history WHERE isSynced = 0")
+    suspend fun getUnsynced(): List<HistoryEntity>
+
+    @Query("UPDATE history SET isSynced = 1 WHERE transferId = :transferId")
+    suspend fun markSynced(transferId: String)
 }
