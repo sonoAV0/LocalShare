@@ -80,7 +80,7 @@ fun HistoryScreen(
             HistoryPlaceholder()
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(history, key = { it.id }) { entry ->
+                items(history, key = { it.transferId }) { entry ->
                     HistoryCard(entry)
                 }
                 item { Spacer(modifier = Modifier.height(20.dp)) }
