@@ -48,7 +48,7 @@ class TransferForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        val channel = NotificationChannel(CHANNEL_ID, "Trasferimenti", NotificationManager.IMPORTANCE_LOW)
+        val channel = NotificationChannel(CHANNEL_ID, "Trasferimenti", NotificationManager.IMPORTANCE_HIGH)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
@@ -75,7 +75,9 @@ class TransferForegroundService : Service() {
         serviceScope.launch {
             try {
                 AppContainer.p2pManager.connect(peer)
-                val connectionInfo = AppContainer.p2pManager.observeConnectionInfo().filterNotNull().first()
+                val connectionInfo = withTimeoutOrNull(30_000.milliseconds) {
+                    AppContainer.p2pManager.observeConnectionInfo().filterNotNull().first()
+                } ?: throw Exception("Timeout: impossibile connettersi a ${peer.name}")
                 updateNotification("Invio in corso a ${peer.name}…")
                 val result = AppContainer.transferManager.sendFile(connectionInfo, fileUri)
                 val (lat, lon) = getLocation() ?: (null to null)
@@ -139,7 +141,8 @@ class TransferForegroundService : Service() {
             .setContentTitle("LocalShare")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setOngoing(true) // impedisce all'utente di togliere la notifica
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
 
     private fun updateNotification(text: String) {
@@ -190,7 +193,7 @@ class TransferForegroundService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "transfers"
+        private const val CHANNEL_ID = "transfers_v2"
         private const val NOTIFICATION_ID = 1
 
         private const val ACTION_SEND = "avogadri.marco.localshare.action.SEND"

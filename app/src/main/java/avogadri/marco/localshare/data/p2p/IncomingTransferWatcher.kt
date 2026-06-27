@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
  * Classe che avvia una coroutine che si occupa di monitorare gli eventi
  * di rete (come un avvio o ricezione di una comunicazione tra peer)
  *
- * Se il peer che capta il broadcast è il ricevente, allora chiama il metodo per preparare la ricezione
+ * Se il peer che capta il broadcast ed è il ricevente, allora chiama il metodo per preparare la ricezione
  *
  * @param context Context dell'applicazione
  * @param p2pManager Manager di P2P
