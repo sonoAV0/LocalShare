@@ -40,8 +40,12 @@ def record_transfer():
         "longitude": data.get("longitude"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    db.transfers.insert_one(entry)
-    entry.pop("_id")
+    db.transfers.update_one(
+        {"transfer_id": entry["transfer_id"]},
+        {"$set": entry},
+        upsert=True,
+    )
+    entry.pop("_id", None)
     return jsonify(entry), 201
 
 

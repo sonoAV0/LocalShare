@@ -17,4 +17,6 @@ interface HistoryRepository {
     ): String
 
     suspend fun fetchGroupHistory(): List<HistoryEntity> = emptyList()
+
+    suspend fun associateToGroup(groupCode: String) {}
 }

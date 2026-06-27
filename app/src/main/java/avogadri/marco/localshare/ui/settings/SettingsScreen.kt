@@ -263,6 +263,7 @@ private val SettingsViewModelFactory = viewModelFactory {
             AppContainer.deviceIdProvider,
             AppContainer.deviceRepository,
             AppContainer.localShareApi,
+            AppContainer.historyRepository,
         )
     }
 }

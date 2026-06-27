@@ -34,6 +34,8 @@ class LocalHistoryRepository(private val historyDao: HistoryDao) : HistoryReposi
         return transferId
     }
 
+    suspend fun getAll(): List<HistoryEntity> = historyDao.getAll()
+
     suspend fun getUnsynced(): List<HistoryEntity> = historyDao.getUnsynced()
 
     suspend fun markSynced(transferId: String) = historyDao.markSynced(transferId)

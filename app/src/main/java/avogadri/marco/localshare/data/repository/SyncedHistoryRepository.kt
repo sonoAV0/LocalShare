@@ -57,6 +57,25 @@ class SyncedHistoryRepository(
         return transferId
     }
 
+    override suspend fun associateToGroup(groupCode: String) {
+        local.getAll().forEach { entry ->
+            runCatching {
+                api.recordTransfer(
+                    RecordTransferRequest(
+                        transferId = entry.transferId,
+                        peerDeviceId = entry.peerDeviceId,
+                        fileName = entry.fileName,
+                        sizeBytes = entry.sizeBytes,
+                        direction = entry.direction.name,
+                        latitude = entry.latitude,
+                        longitude = entry.longitude,
+                        groupCode = groupCode,
+                    )
+                )
+            }
+        }
+    }
+
     override suspend fun fetchGroupHistory(): List<HistoryEntity> {
         val code = prefs.groupCode ?: return emptyList()
         if (!prefs.syncEnabled || prefs.jwtToken == null) return emptyList()

@@ -19,4 +19,7 @@ interface HistoryDao {
 
     @Query("UPDATE history SET isSynced = 1 WHERE transferId = :transferId")
     suspend fun markSynced(transferId: String)
+
+    @Query("SELECT * FROM history")
+    suspend fun getAll(): List<HistoryEntity>
 }

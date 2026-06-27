@@ -13,6 +13,7 @@ import avogadri.marco.localshare.data.local.DeviceIdProvider
 import avogadri.marco.localshare.data.remote.GroupResponse
 import avogadri.marco.localshare.data.remote.LocalShareApi
 import avogadri.marco.localshare.data.repository.DeviceRepository
+import avogadri.marco.localshare.data.repository.HistoryRepository
 import avogadri.marco.localshare.service.SyncWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +35,7 @@ class SettingsViewModel(
     private val deviceIdProvider: DeviceIdProvider,
     private val deviceRepository: DeviceRepository,
     private val api: LocalShareApi,
+    private val historyRepository: HistoryRepository,
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(
@@ -82,6 +84,7 @@ class SettingsViewModel(
                 .onSuccess { response ->
                     prefs.groupCode = response.code
                     _uiState.update { it.copy(groupActionLoading = false, groupCode = response.code) }
+                    historyRepository.associateToGroup(response.code)
                 }
                 .onFailure {
                     _uiState.update { it.copy(groupActionLoading = false, groupActionError = "Errore nella creazione del gruppo") }
@@ -96,6 +99,7 @@ class SettingsViewModel(
                 .onSuccess { response ->
                     prefs.groupCode = response.code
                     _uiState.update { it.copy(groupActionLoading = false, groupCode = response.code) }
+                    historyRepository.associateToGroup(response.code)
                 }
                 .onFailure {
                     _uiState.update { it.copy(groupActionLoading = false, groupActionError = "Codice non valido") }
