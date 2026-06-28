@@ -93,7 +93,7 @@ fun DiscoveryScreen(
                             } else {
                                 Toast.makeText(
                                     context,
-                                    "Trasferimento già in corso, attendi il completamento",
+                                    "Transaction already running, wait for it to finish",
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             }

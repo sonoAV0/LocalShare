@@ -77,8 +77,8 @@ class TransferForegroundService : Service() {
                 AppContainer.p2pManager.connect(peer)
                 val connectionInfo = withTimeoutOrNull(30_000.milliseconds) {
                     AppContainer.p2pManager.observeConnectionInfo().filterNotNull().first()
-                } ?: throw Exception("Timeout: impossibile connettersi a ${peer.name}")
-                updateNotification("Invio in corso a ${peer.name}…")
+                } ?: throw Exception("Timeout: failed to connect to ${peer.name}")
+                updateNotification("Sending to ${peer.name}…")
                 val result = AppContainer.transferManager.sendFile(connectionInfo, fileUri)
                 val (lat, lon) = getLocation() ?: (null to null)
                 AppContainer.historyRepository.recordTransfer(
@@ -89,9 +89,9 @@ class TransferForegroundService : Service() {
                     latitude = lat,
                     longitude = lon,
                 )
-                updateNotification("Invio completato: ${result.fileName}")
+                updateNotification("Transaction completed: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification("Errore durante la condivisione del file")
+                updateNotification("An error occurred during file sharing")
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 AppContainer.p2pManager.disconnect() // chiusura del gruppo
@@ -108,7 +108,7 @@ class TransferForegroundService : Service() {
         )
 
         TransferSessionState.isTransferring.set(true)
-        startForeground(NOTIFICATION_ID, buildNotification("In attesa di un file…"))
+        startForeground(NOTIFICATION_ID, buildNotification("Waiting for the file..."))
 
         serviceScope.launch {
             try {
@@ -122,9 +122,9 @@ class TransferForegroundService : Service() {
                     latitude = lat,
                     longitude = lon,
                 )
-                updateNotification("Ricevuto: ${result.fileName}")
+                updateNotification("Success: ${result.fileName}")
             } catch (e: Exception) {
-                updateNotification("Errore durante la condivisione del file")
+                updateNotification("An error occurred during file sharing")
             } finally {
                 TransferSessionState.isTransferring.set(false)
                 stopForeground(STOP_FOREGROUND_DETACH)

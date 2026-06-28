@@ -137,7 +137,7 @@ private fun HistoryCard(entry: HistoryEntity) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    DetailRow(label = "Dimensione", value = formatSize(entry.sizeBytes))
+                    DetailRow(label = "Dimension", value = formatSize(entry.sizeBytes))
                     Spacer(modifier = Modifier.height(4.dp))
                     DetailRow(label = "Peer ID", value = entry.peerDeviceId)
                     Spacer(modifier = Modifier.height(12.dp))
@@ -164,7 +164,7 @@ private fun HistoryCard(entry: HistoryEntity) {
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Posizione non disponibile",
+                                text = "Location not available",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -222,7 +222,7 @@ private fun DirectionBadge(direction: TransferDirection) {
     ) {
         Icon(
             imageVector = if (isSent) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
-            contentDescription = if (isSent) "Inviato" else "Ricevuto",
+            contentDescription = if (isSent) "Sent" else "Received",
             tint = iconColor,
             modifier = Modifier.padding(10.dp),
         )
@@ -273,7 +273,7 @@ private fun formatTimestamp(millis: Long): String =
 
 @SuppressLint("DefaultLocale")
 private fun formatSize(bytes: Long): String = when {
-    bytes < 0 -> "Sconosciuta"
+    bytes < 0 -> "Unknown"
     bytes < 1_024 -> "$bytes B"
     bytes < 1_048_576 -> "${bytes / 1_024} KB"
     else -> String.format("%.1f MB", bytes / 1_048_576.0)

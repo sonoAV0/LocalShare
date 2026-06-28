@@ -3,6 +3,7 @@ package avogadri.marco.localshare.data.repository
 import avogadri.marco.localshare.data.local.db.HistoryEntity
 import avogadri.marco.localshare.data.local.db.TransferDirection
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 interface HistoryRepository {
     fun observeHistory(): Flow<List<HistoryEntity>>
@@ -19,4 +20,6 @@ interface HistoryRepository {
     suspend fun fetchGroupHistory(): List<HistoryEntity> = emptyList()
 
     suspend fun associateToGroup(groupCode: String) {}
+
+    fun observeMergedHistory(): Flow<List<HistoryEntity>> = observeHistory()
 }

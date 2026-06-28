@@ -1,5 +1,6 @@
 package avogadri.marco.localshare.ui.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.History
@@ -35,19 +38,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import avogadri.marco.localshare.data.AppContainer
+import avogadri.marco.localshare.data.local.db.HistoryEntity
+import avogadri.marco.localshare.data.local.db.TransferDirection
 import avogadri.marco.localshare.ui.components.LocalShareLogo
 import avogadri.marco.localshare.ui.permissions.rememberWifiDirectPermissionRequester
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
-/**
-* Composable della home screen dell'applicazione, contiene i collegamenti
-* alla history e alla ricerca di dispositivi
-*/
 @Composable
 fun HomeScreen(
     onStartTransfer: () -> Unit = {},
@@ -56,12 +61,12 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val recentHistory by viewModel.recentHistory.collectAsStateWithLifecycle()
     val requestWifiDirectPermissions = rememberWifiDirectPermissionRequester(onGranted = onStartTransfer)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.Top,
     ) {
@@ -87,7 +92,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Inizio di una comunicazione P2P
         Surface(
             onClick = requestWifiDirectPermissions,
             shape = RoundedCornerShape(28.dp),
@@ -157,12 +161,125 @@ fun HomeScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Recent transactions",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            if (recentHistory.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        )
+                        Text(
+                            text = "No transactions yet",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    recentHistory.forEach { entry ->
+                        RecentTransactionCard(
+                            entry = entry,
+                            onClick = onOpenHistory,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
-/**
- * Composable di un sample di card nella home screen
- */
+@Composable
+private fun RecentTransactionCard(
+    entry: HistoryEntity,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val isSent = entry.direction == TransferDirection.SENT
+            Surface(
+                shape = CircleShape,
+                color = if (isSent) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    imageVector = if (isSent) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
+                    contentDescription = null,
+                    tint = if (isSent) MaterialTheme.colorScheme.onPrimaryContainer
+                           else MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(10.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.fileName,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                )
+                Text(
+                    text = "${entry.peerDeviceId.take(17)}  •  ${formatTimestamp(entry.timestampMillis)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun HomeActionCard(
     icon: ImageVector,
@@ -195,9 +312,6 @@ private fun HomeActionCard(
     }
 }
 
-/**
- * Composable della card che mostra le prime 8 cifre dello UUID del dispositivo
- */
 @Composable
 private fun DeviceStatusCard(uiState: HomeUiState, modifier: Modifier = Modifier) {
     Surface(
@@ -233,18 +347,15 @@ private fun DeviceStatusCard(uiState: HomeUiState, modifier: Modifier = Modifier
             }
 
             when {
-                // se si sta registrando mostro un caricamento
                 uiState.isRegistering -> CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
                 )
-                // se c'è un errore, mostro l'icona di errore
                 uiState.errorMessage != null -> Icon(
                     imageVector = Icons.Outlined.ErrorOutline,
                     contentDescription = "Registration failed",
                     tint = MaterialTheme.colorScheme.error,
                 )
-                // se le altre opzioni non si verificano, la registrazione è andata a buon fine e mostro il check verde
                 else -> Icon(
                     imageVector = Icons.Outlined.CheckCircle,
                     contentDescription = "Registered",
@@ -255,6 +366,17 @@ private fun DeviceStatusCard(uiState: HomeUiState, modifier: Modifier = Modifier
     }
 }
 
+private val timestampFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+
+private fun formatTimestamp(millis: Long): String =
+    Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).format(timestampFormatter)
+
 private val HomeViewModelFactory = viewModelFactory {
-    initializer { HomeViewModel(AppContainer.deviceIdProvider, AppContainer.deviceRepository) }
+    initializer {
+        HomeViewModel(
+            AppContainer.deviceIdProvider,
+            AppContainer.deviceRepository,
+            AppContainer.historyRepository,
+        )
+    }
 }
