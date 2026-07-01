@@ -1,0 +1,216 @@
+\documentclass[11pt,a4paper]{article}
+
+% ===================== PACCHETTI =====================
+\usepackage[italian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault,light]{FiraSans}   
+\usepackage[scaled=.85]{FiraMono}        
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\graphicspath{{immagini/}}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{parskip}
+\usepackage{dirtree}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings, skins, breakable}
+
+% ===================== PALETTE COLORI APP =====================
+\definecolor{primaryGreen}{HTML}{006D38}
+\definecolor{tertiaryBlue}{HTML}{245ABC}
+\definecolor{onBackground}{HTML}{161D17}
+\definecolor{onSurfaceVariant}{HTML}{3D4A3F}
+\definecolor{outlineColor}{HTML}{6D7B6E}
+\definecolor{surfaceContainerLow}{HTML}{EEF6EB}
+\definecolor{codeString}{HTML}{005229}
+% dark theme (blocchi codice)
+\definecolor{codeBg}{HTML}{0E150F}
+\definecolor{codeText}{HTML}{DDE5DA}
+\definecolor{codeKeyword}{HTML}{50E087}
+\definecolor{codeComment}{HTML}{9DD3A8}
+\definecolor{codeStringDark}{HTML}{B0C6FF}
+
+% ===================== LOGO APP (TikZ) =====================
+\newcommand{\LocalShareLogo}[1][1]{%
+  \begin{tikzpicture}[scale=#1]
+    \begin{scope}
+      \clip (0,0) circle (1cm);
+      \shade[left color=primaryGreen, right color=tertiaryBlue]
+        (-1cm,-1cm) rectangle (1cm,1cm);
+    \end{scope}
+    \fill[white, opacity=0.95] (-0.214cm, 0) circle (0.388cm);
+    \fill[white, opacity=0.95] ( 0.214cm, 0) circle (0.388cm);
+  \end{tikzpicture}%
+}
+
+% ===================== LINGUAGGIO KOTLIN =====================
+\lstdefinelanguage{Kotlin}{
+  keywords={fun, val, var, class, object, interface, data, sealed, enum, override,
+             suspend, return, if, else, when, for, while, try, catch, throw,
+             private, public, internal, protected, companion, by, lazy, true, false, null,
+             import, package, is, as, in, out, this, super, init, constructor},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  sensitive=true,
+}
+
+% ===================== CONFIGURAZIONE CODICE =====================
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  keywordstyle=\color{primaryGreen}\bfseries,
+  commentstyle=\color{onSurfaceVariant}\itshape,
+  stringstyle=\color{codeString},
+  showstringspaces=false,
+  tabsize=2,
+}
+
+\newcommand{\inputcodeblock}[2][Kotlin]{%
+  \tcbinputlisting{%
+    listing engine=listings,
+    listing only, enhanced,
+    arc=8pt, colback=codeBg, colframe=tertiaryBlue,
+    leftrule=4pt, rightrule=0pt, toprule=0pt, bottomrule=0pt,
+    top=6pt, bottom=6pt, left=12pt, right=10pt,
+    breakable,
+    listing options={%
+      language=#1,
+      basicstyle=\ttfamily\small\color{codeText},
+      breaklines=true,
+      keywordstyle=\color{codeKeyword}\bfseries,
+      commentstyle=\color{codeComment}\itshape,
+      stringstyle=\color{codeStringDark},
+      showstringspaces=false, tabsize=2,
+    },
+    listing file={codice/#2}%
+  }%
+}
+
+\newtcblisting{codeblock}[1][]{
+  listing engine=listings,
+  listing only,
+  enhanced,
+  arc=8pt,
+  colback=codeBg,
+  colframe=tertiaryBlue,
+  leftrule=4pt, rightrule=0pt, toprule=0pt, bottomrule=0pt,
+  top=6pt, bottom=6pt, left=12pt, right=10pt,
+  breakable,
+  listing options={
+    basicstyle=\ttfamily\small\color{codeText},
+    breaklines=true,
+    keywordstyle=\color{codeKeyword}\bfseries,
+    commentstyle=\color{codeComment}\itshape,
+    stringstyle=\color{codeStringDark},
+    showstringspaces=false,
+    tabsize=2,
+    #1
+  }
+}
+
+% ===================== STILE SEZIONI =====================
+\titleformat{\section}
+  {\Large\bfseries\color{tertiaryBlue}}
+  {\thesection}{1em}{}
+  [\vspace{2pt}{\color{outlineColor}\titlerule[0.4pt]}\vspace{4pt}]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{onBackground}}
+  {\thesubsection}{1em}{}
+
+\titlespacing*{\section}{0pt}{22pt}{8pt}
+\titlespacing*{\subsection}{0pt}{14pt}{4pt}
+
+\addto\captionsitalian{\renewcommand{\refname}{Riferimenti e fonti utilizzate}}
+
+% ===================== METADATI =====================
+\newcommand{\nomeProgetto}{LocalShare}
+\newcommand{\nomeStudente}{Marco Avogadri}
+\newcommand{\matricola}{358105}
+\newcommand{\nomeCorso}{Programmazione di sistemi mobili}
+\newcommand{\nomeDocente}{Nome Docente}
+\newcommand{\nomeUniversita}{Università degli studi di Parma}
+\newcommand{\annoAccademico}{2025/2026}
+
+% ===================== INTESTAZIONE/PIEDE PAGINA =====================
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{{\color{tertiaryBlue}\hrule width\headwidth height\headrulewidth \vskip-\headrulewidth}}
+\lhead{\small\color{onSurfaceVariant}Relazione di progetto}
+\rhead{\small\color{tertiaryBlue}\textbf{\nomeProgetto}}
+\rfoot{\small\color{onSurfaceVariant}\thepage}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=tertiaryBlue,
+    urlcolor=tertiaryBlue,
+    citecolor=onSurfaceVariant,
+    pdftitle={Relazione progetto: \nomeProgetto},
+    pdfauthor={\nomeStudente}
+}
+
+\begin{document}
+
+% ===================== FRONTESPIZIO =====================
+\hypersetup{pageanchor=false}
+\begin{titlepage}
+    \centering
+
+    {\color{tertiaryBlue}\rule{\textwidth}{2pt}}
+    \vspace{0.4cm}
+
+    {\large\color{onBackground}\nomeUniversita \par}
+    \vspace{0.15cm}
+    {\color{onSurfaceVariant}\nomeCorso \par}
+
+    \vspace{3cm}
+
+    \LocalShareLogo[1.8]
+    \vspace{0.6cm}
+
+    {\fontsize{52}{62}\selectfont\color{onBackground}\nomeProgetto \par}
+    \vspace{0.5cm}
+    {\large\color{onSurfaceVariant} Relazione progetto \par}
+
+    \vfill
+
+    \begin{flushleft}
+        {\footnotesize\color{onSurfaceVariant}\MakeUppercase{Studente}}\\[5pt]
+        {\large\bfseries\color{onBackground}\nomeStudente}\\[3pt]
+        {\small\color{onSurfaceVariant}Matricola:\ \matricola}
+    \end{flushleft}
+
+    \vspace{0.8cm}
+    
+    \vfill
+
+    {\color{outlineColor}\rule{\textwidth}{0.4pt}}
+    \vspace{0.4cm}
+    {\color{onSurfaceVariant}Anno Accademico\ \annoAccademico}
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\hypersetup{linkcolor=onBackground}
+\tableofcontents
+\hypersetup{linkcolor=tertiaryBlue}
+\newpage
+
+% ===================== CAPITOLI =====================
+\input{capitoli/introduzione}
+\input{capitoli/requisiti}
+\input{capitoli/tecnologie}
+\input{capitoli/progettazione}
+\input{capitoli/implementazione}
+\input{capitoli/funzionamento}
+\input{capitoli/conclusioni}
+
+\end{document}

@@ -15,4 +15,14 @@
 local.properties
 HANDOFF.md
 .idea/
-relazione
+
+# LaTeX build artifacts
+relazione/*.aux
+relazione/*.fdb_latexmk
+relazione/*.fls
+relazione/*.listing
+relazione/*.log
+relazione/*.out
+relazione/*.synctex.gz
+relazione/*.toc
+relazione/*.pdf
