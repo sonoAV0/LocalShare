@@ -10,6 +10,7 @@ import avogadri.marco.localshare.data.p2p.P2pManager
 import avogadri.marco.localshare.data.p2p.SocketTransferManager
 import avogadri.marco.localshare.data.p2p.TransferManager
 import avogadri.marco.localshare.data.p2p.WifiDirectP2pManager
+import avogadri.marco.localshare.data.remote.AuthInterceptor
 import avogadri.marco.localshare.data.remote.LocalShareApi
 import avogadri.marco.localshare.data.repository.BackendDeviceRepository
 import avogadri.marco.localshare.data.repository.DeviceRepository
@@ -37,17 +38,7 @@ object AppContainer {
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
-            .addInterceptor { chain ->
-                val token = backendPreferences.jwtToken
-                val request = if (token != null) {
-                    chain.request().newBuilder()
-                        .header("Authorization", "Bearer $token")
-                        .build()
-                } else {
-                    chain.request()
-                }
-                chain.proceed(request)
-            }
+            .addInterceptor(AuthInterceptor(backendPreferences))
             .build()
     }
 

@@ -12,9 +12,10 @@ import avogadri.marco.localshare.data.remote.BackendTransferResponse
 import avogadri.marco.localshare.data.remote.LocalShareApi
 import avogadri.marco.localshare.data.remote.RecordTransferRequest
 import avogadri.marco.localshare.service.SyncWorker
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import java.time.Instant
 
 class SyncedHistoryRepository(
@@ -60,11 +61,18 @@ class SyncedHistoryRepository(
     }
 
     override fun observeMergedHistory(): Flow<List<HistoryEntity>> {
-        val remoteFlow = flow { emit(fetchGroupHistory()) }
+        val remoteFlow = flow {
+            while (true) {
+                emit(fetchGroupHistory())
+                delay(30_000)
+            }
+        }
         return combine(local.observeHistory(), remoteFlow) { local, remote ->
             val localIds = local.map { it.transferId }.toSet()
             val remoteOnly = remote.filter { it.transferId !in localIds }
-            (local + remoteOnly).sortedByDescending { it.timestampMillis }
+            (local + remoteOnly)
+                .distinctBy { it.transferId }
+                .sortedByDescending { it.timestampMillis }
         }
     }
 

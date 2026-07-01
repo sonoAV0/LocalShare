@@ -31,6 +31,7 @@ class WifiDirectP2pManager(private val context: Context) : P2pManager {
             }
         }
 
+        // il broadcast resta in ascolto e segnala un cambiamento nella lista di peer disponibili
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.action == WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION) {

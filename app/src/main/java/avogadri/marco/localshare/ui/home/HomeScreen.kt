@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -201,18 +202,22 @@ fun HomeScreen(
                     }
                 }
             } else {
-                Column(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    recentHistory.forEach { entry ->
-                        RecentTransactionCard(
-                            entry = entry,
-                            onClick = onOpenHistory,
-                            modifier = Modifier.weight(1f),
-                        )
+                    val cardHeight = (maxHeight - 16.dp) / 3
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        recentHistory.forEach { entry ->
+                            RecentTransactionCard(
+                                entry = entry,
+                                onClick = onOpenHistory,
+                                modifier = Modifier.height(cardHeight),
+                            )
+                        }
                     }
                 }
             }

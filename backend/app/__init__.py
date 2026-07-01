@@ -17,6 +17,7 @@ def create_app():
     global mongo_client, db
     mongo_client = MongoClient(app.config["MONGO_URI"])
     db = mongo_client.get_default_database()
+    db.transfers.create_index("transfer_id", unique=True)
 
     from .routes.auth import auth_bp
     from .routes.history import history_bp
