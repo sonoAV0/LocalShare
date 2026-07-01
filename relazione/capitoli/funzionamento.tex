@@ -1,0 +1,74 @@
+\section{Funzionamento dell'applicazione}
+\label{sec:funzionamento}
+
+\subsection{Schermata principale}
+
+L'applicazione all'avvio mostrerà la \textbf{Home Screen}, che fornisce un collegamento diretto a tutte le funzionalità offerte dall'app.
+
+La schermata è suddivisa in tre parti principali: la prima mostra il \textbf{Device ID} del dispositivo, al lato l'icona in verde conferma la corretta autenticazione del dispositivo; 
+
+poco sotto ci sono i bottoni di navigazione per le schermate dell'app: il primo in verde per iniziare un trasfermento porterà alla schermata dove inizierà la discovery dei dispositivi circostanti,
+
+i due tasti sotto portano invece portano rispettivamente alla history delle transazioni e alle opzioni, dove l'utente ha la possibilità di abilitare il synch con il backend e gestire i gruppi.
+
+nella parte sottostante sono mostrate le ultime tre transazioni effettuate, ciascuna mostrata in una card con il nome del file, la dimensione, la direzione (invio o ricezione) e il timestamp.
+
+\vspace{12pt}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.42\textwidth]{home_page.png}
+    \caption{Home Screen con le ultime transazioni recenti}
+    \label{fig:home}
+\end{figure}
+
+\subsection{Navigazione}
+
+\subsubsection*{Discovery e invio file}
+
+Premendo il tasto verde nella Home l'utente accede alla \textbf{Discovery Screen}. L'app avvia automaticamente la scansione Wi-Fi Direct e mostra i dispositivi rilevati nelle vicinanze. Per avviare un trasferimento l'utente seleziona prima il dispositivo destinatario e poi sceglie il file dal file picker di sistema; a quel punto inizierà il traferimento, facendo comparire la notifica persistente di avanzamento.
+
+\vspace{12pt}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.65\textwidth]{pairing_page.png}
+    \caption{Discovery Screen con i dispositivi rilevati nelle vicinanze}
+    \label{fig:discovery}
+\end{figure}
+
+\pagebreak
+\subsubsection*{History}
+
+La \textbf{History Screen} elenca tutte le transazioni registrate, sia locali che sincronizzate dal gruppo. Ogni \texttt{HistoryCard} è collassabile: inizialmente mostra le info principali come nome del file e il timestamp; espandendola compaiono anche il Device ID del peer e, se disponibile, la posizione in cui è avvenuto il trasferimento.
+
+\vspace{12pt}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.42\textwidth]{history_page.png}
+    \caption{History Screen con le transazioni registrate}
+    \label{fig:history}
+\end{figure}
+
+\pagebreak
+\subsubsection*{Impostazioni e gruppi}
+
+La \textbf{Settings Screen} permette di abilitare la sincronizzazione con il backend e di gestire i gruppi. Attivandolo, l'app registra il dispositivo sul backend ottenendo il token. Nella sezione gruppi l'utente può creare un nuovo gruppo oppure unirsi a uno esistente inserendo il codice; al join, tutte le entry locali vengono caricate sul backend con il codice del gruppo, rendendole visibili agli altri membri.
+
+\vspace{12pt}
+\begin{figure}[h]
+    \centering
+    \begin{minipage}[t]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{settings_page.png}
+        \caption{Settings Screen}
+        \label{fig:settings}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{settings_page_group_created.png}
+        \caption{Gruppo creato con codice condivisibile}
+        \label{fig:settings-group}
+    \end{minipage}
+\end{figure}
+
+\clearpage

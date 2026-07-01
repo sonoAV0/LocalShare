@@ -1,0 +1,148 @@
+\section{Implementazione}
+\label{sec:implementazione}
+
+\subsection{Struttura del codice}
+
+Il progetto è suddiviso in due componenti principali: l'applicazione Android e il backend Flask.
+
+\subsubsection*{Applicazione Android}
+
+\noindent\begin{minipage}{\textwidth}
+\dirtree{%
+.1 localshare/.
+.2 MainActivity.kt.
+.2 data/.
+.3 AppContainer.kt.
+.3 local/.
+.4 DeviceIdProvider.kt.
+.4 BackendPreferences.kt.
+.4 db/.
+.5 HistoryEntity.kt.
+.5 HistoryDao.kt.
+.5 LocalShareDatabase.kt.
+.3 remote/.
+.4 LocalShareApi.kt.
+.4 ApiModels.kt.
+.4 AuthInterceptor.kt.
+.3 p2p/.
+.4 P2pManager.kt.
+.4 WifiDirectP2pManager.kt.
+.4 TransferManager.kt.
+.4 SocketTransferManager.kt.
+.4 IncomingTransferWatcher.kt.
+.3 repository/.
+.4 HistoryRepository.kt.
+.4 LocalHistoryRepository.kt.
+.4 SyncedHistoryRepository.kt.
+.4 DeviceRepository.kt.
+.4 BackendDeviceRepository.kt.
+.2 service/.
+.3 TransferForegroundService.kt.
+.3 SyncWorker.kt.
+.2 ui/.
+.3 home/.
+.3 discovery/.
+.3 history/.
+.3 settings/.
+.3 navigation/.
+.3 theme/.
+}
+\end{minipage}
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{data/local/}: persistenza locale tramite Room e preferenze in \texttt{Shared\-Preferences}.
+    \item \texttt{data/remote/}: interfaccia Retrofit e modelli di serializzazione per le chiamate REST.
+    \item \texttt{data/p2p/}: gestione della connessione Wi-Fi Direct e del trasferimento file via socket TCP.
+    \item \texttt{data/repository/}: repository che astraggono le sorgenti dati; \texttt{Synced\-His\-to\-ry\-Re\-po\-si\-to\-ry} combina locale e remoto.
+    \item \texttt{service/}: \texttt{TransferForegroundService} mantiene attivo il trasferimento in background; \texttt{SyncWorker} ritenta la sincronizzazione quando torna la connessione.
+    \item \texttt{ui/}: schermate e ViewModel organizzati per funzionalità; \texttt{theme/} contiene la palette e la tipografia Material~3.
+\end{itemize}
+
+\subsubsection*{Backend Flask}
+
+\dirtree{%
+.1 backend/.
+.2 run.py.
+.2 app/.
+.3 \_\_init\_\_.py.
+.3 config.py.
+.3 routes/.
+.4 auth.py.
+.4 history.py.
+.4 groups.py.
+}
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{run.py}: punto di ingresso dell'applicazione Flask.
+    \item \texttt{app/\_\_init\_\_.py}: inizializza l'app, configura JWT e la connessione MongoDB.
+    \item \texttt{routes/auth.py}: endpoint di registrazione e login tramite UUID.
+    \item \texttt{routes/history.py}: endpoint per registrare e recuperare i trasferimenti.
+    \item \texttt{routes/groups.py}: endpoint per creare e unirsi a un gruppo.
+\end{itemize}
+
+\subsection{Funzionalità principali}
+
+Le funzionalità dell'applicazione possono essere elencate seguendo 3 macrocategorie:
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{Connessione con Wi-Fi Direct}
+    \item  \texttt{Trasferimento di file tramite socket TCP}
+    \item \texttt{Persistenza dei dati (locali/su backend)}
+\end{itemize}
+
+\subsubsection*{Connessione Wi-Fi Direct}
+
+La connessione tra dispositivi è gestita da \texttt{WifiDirectP2pManager}, che fa da wrapper attorno alle API di sistema \texttt{WifiP2pManager}. Il flusso principale è il seguente:
+
+\begin{enumerate}[leftmargin=1.4cm]
+    \item \textbf{Discovery}: \texttt{startDiscovery()} avvia la scansione dei dispositivi vicini tramite \texttt{manager.\allowbreak discoverPeers()}. Come spiegato precedentemente, ogni cambiamento nella lista dei peer disponibili viene segnalato dal broadcast \texttt{WIFI\_P2P\_\allowbreak PEERS\_\allowbreak CHANGED\_\allowbreak ACTION}; questo all'interno del contesto di coroutine \texttt{callbackFlow} che lo intercetta e richiede la lista aggiornata, ritornando una \texttt{Flow<List<\allowbreak PeerDevice>>}.
+
+    \pagebreak
+    \item \textbf{Connessione}: in questa fase viene stabilito da Wi-Fi direct quale dispositivo sarà il group owner (il server) e quale il client formando il gruppo P2P. Anche in questo caso il metodo \texttt{connect()} dell'API viene adattato perchè basato su callback, questa volta usando il blocco \texttt{suspendCancellableCoroutine}:
+\end{enumerate}
+
+\inputcodeblock{wifidirect_connect.kt}
+
+Quando \texttt{connet()} ritorna success, il sistema invia il broadcast \texttt{WIFI\_P2P\_\allowbreak CONNECTION\_\allowbreak CHANGED\_\allowbreak ACTION}, ma il gruppo non si sarà ancora formato. Subito dopo quindi \texttt{observeConnectionInfo()} lo intercetta e restituisce le informazioni sul gruppo P2P formato: l'indirizzo IP del group owner e il ruolo del dispositivo (owner o client), che vengono passate al \texttt{Transfer\-Foreground\-Service} per avviare il trasferimento:
+
+\inputcodeblock{group_creation.kt}
+{\small\color{onSurfaceVariant}\itshape\centering Dopo la connessione prova per 30 secondi a controllare che il gruppo sia creato\par}
+\vspace{4pt}
+
+\subsubsection*{Trasferimento file via socket TCP}
+
+Una volta ottenute le informazioni di connessione, il trasferimento avviene tramite socket TCP sulla porta \texttt{8988}. L'apertura del socket segue ruoli distinti in base al ruolo nel gruppo P2P:
+
+\inputcodeblock{socket_open.kt}
+
+Il \emph{group owner} funge da server: apre un \texttt{ServerSocket} e attende la connessione in ingresso con \texttt{accept()}. Il \emph{client} si connette attivamente all'indirizzo IP del group owner. 
+
+Il protocollo di trasferimento dei file funziona attraverso 2 stream: il mittente scrive su un \texttt{DataOutputStream} il nome del file, la dimensione in byte e il contenuto del file tramite \texttt{copyTo}. Il ricevente legge gli stessi campi nello stesso ordine e salva il file nella directory esterna dell'app:
+
+\inputcodeblock{send_file.kt}
+{\small\color{onSurfaceVariant}\itshape\centering Metodo di invio file, il metodo di ricezione è speculare\par}
+\vspace{4pt}
+
+\subsubsection*{Persistenza dei dati}
+
+\subsubsection*{SQLite con Android Room}
+
+Al termine di ogni trasferimento, \texttt{Transfer\-Foreground\-Service} chiama il metodo \texttt{\allowbreak recordTransfer()} di \texttt{history\-Repository}, che in \texttt{Local\-History\-Repository} genera un UUID e lo inserisce nella tabella \texttt{history} tramite il DAO.
+
+\inputcodeblock{local_record_transfer.kt}
+
+\subsubsection*{Backend con Flask e MongoDB}
+
+Se l'utente decide di attivare la sincronizzazione, le entry precedentemente salvate in locale saranno sincronizzate su MongoDB e quelle create successivamente saranno salvate su entrambi i DB. La politica di persistenza è però \texttt{local first}: il metodo di salvataggio principale e garantito resta il DB su Room e successivamente viene tentato sul backend:
+
+\inputcodeblock{synced_record_transfer.kt}
+
+Viene inoltre utilizzato un \texttt{SyncWorker} tramite \texttt{WorkManager} per tutte le chiamate REST al backend fallite (mancanza di connessione / errori del server), e una volta tornata la connessione tenta la sync verrà ritentata la sincronizzazione di tutte quelle entry locali con il flag \texttt{isSynced = false}  
+
+La stessa logica si applica ai gruppi: quando un dispositivo entra in un gruppo, \texttt{associate\-To\-Group()} carica sul backend tutte le entry locali esistenti con il codice del gruppo, rendendole visibili agli altri membri.
+
+\subsubsection*{Schermate e ViewModel}
+
+Ogni schermata (\texttt{HomeScreen}, \texttt{DiscoveryScreen}, \texttt{HistoryScreen}, \texttt{SettingsScreen}) è un Composable associato al proprio ViewModel, creato tramite una \texttt{viewModelFactory} come descritto nella sezione~\ref{sec:progettazione}. I ViewModel espongono lo stato tramite \texttt{StateFlow} e le schermate si aggiornano tramite recomposition. La navigazione tra schermate è gestita da \texttt{NavHost} in \texttt{navigation/}.
+
+\pagebreak
+

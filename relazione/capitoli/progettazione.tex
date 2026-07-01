@@ -1,0 +1,164 @@
+\section{Progettazione}
+\label{sec:progettazione}
+
+\subsection{Architettura generale}
+
+Il sistema è composto da due parti distinte: l'applicazione Android, che funge da client, e un backend REST containerizzato, che gestisce autenticazione, sincronizzazione della history e la logica dei gruppi.
+
+\subsubsection*{Architettura Android -- pattern MVVM}
+
+Il lato Android adotta il pattern \textbf{MVVM} (Model--View--ViewModel). I tre livelli principali sono:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \textbf{UI layer} (\texttt{ui/}): ogni schermata è un \emph{Composable} che osserva uno \texttt{StateFlow} esposto dal proprio ViewModel. Quando lo stato cambia, Compose effettua una recomposition, cambiando la UI in base al suo stato. Il color scheme e la tipografia generale dell'intera UI sono definiti da un tema \textbf{Material 3}.
+
+    \item \textbf{ViewModel} (\texttt{ui/<schermata>/}): raccoglie i dati dalle repository, applica la logica di presentazione e li espone tramite una \texttt{data class} di stato (\texttt{UiState}). Un esempio si può osservare in \texttt{HomeViewModel}, dove vengono esposte le ultime 3 entry della history:
+
+\inputcodeblock{home_viewmodel_recent.kt}
+
+    \item \textbf{Data layer} (\texttt{data/}): espone i dati tramite interfacce di repository, nascondendo alla UI se i dati provengono dal database locale o dal backend.
+\end{itemize}
+
+\subsubsection*{Data layer -- struttura a strati}
+
+Il data layer è organizzato in tre sotto-moduli:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{data/local/db/}: database SQLite creato con Room per la persistenza locale dei dati. E' il metodo primario di persistenza dell'applicazione. 
+    \item \texttt{data/remote/}: interfaccia Retrofit \texttt{LocalShareApi} con le chiamate REST per la comunicazione con il web service Flask, il quale persiste i dati su un database non relazionale MongoDB. 
+    \item \texttt{data/p2p/}: gestione della connessione Wi-Fi Direct e del trasferimento file con protocollo TCP.
+\end{itemize}
+
+\subsubsection*{Comunicazione con il backend}
+
+La sincronizzazione con il backend è \textbf{opzionale}: l'app funziona in modo autonomo anche senza connessione, poiché l'identità del dispositivo è un UUID generato localmente alla prima installazione tramite \texttt{DeviceIdProvider}, senza bisogno di contattare alcun server. Il backend viene coinvolto solo per la sincronizzazione della history e la condivisione tramite gruppi.
+
+Quando la sincronizzazione è abilitata, le chiamate REST sono effettuate tramite \textbf{Retrofit}, con \textbf{kotlinx.serialization} come converter per il parsing JSON.
+L'autenticazione avviene tramite JWT: l'app registra il proprio UUID sul backend e ottiene un token, che viene salvato nelle \texttt{Shared\-Preferences}; per far sì che ogni chiamata abbia nell'header il token, viene utilizzato un interceptor:
+
+\inputcodeblock{okhttp_jwt_interceptor.kt}
+
+La repository \texttt{SyncedHistoryRepository} si occupa della sincronizzazione tra la repository locale e quella backend, dando precedenza alla persistenza locale: ogni trasferimento viene prima salvato nel database Room, poi si tenta l'invio al backend. Se la rete non è disponibile, un \texttt{WorkManager} si occuperà di ritentantare la sincronizzazione una volta che il dispositivo ritornerà connesso.
+
+\subsection{Struttura dei dati / Database}
+
+L'applicazione utilizza due livelli di persistenza distinti: un database locale sul dispositivo Android (metodo principale e sempre utilizzato) e un database remoto sul backend (secondario e utilizzato secondo le preferenze dell'utente).
+
+\subsubsection*{Persistenza locale -- Room (SQLite)}
+
+Il database locale necessita di una sola tabella contenente le entry che costituiscono la history delle transazioni di un utente: \texttt{history}, mappata dalla \texttt{data class} \texttt{HistoryEntity}:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{transferId}: UUID che identifica univocamente il trasferimento; è la chiave condivisa con il backend.
+    \item \texttt{peerDeviceId}: UUID del dispositivo con cui è avvenuto lo scambio.
+    \item \texttt{fileName}: nome del file trasferito.
+    \item \texttt{sizeBytes}: dimensione del file trasferito.
+    \item \texttt{direction}: enum \texttt{SENT} / \texttt{RECEIVED} per identificare i file trasferiti da quelli ricevuti.
+    \item \texttt{timestampMillis}: timestamp della transazione.
+    \item \texttt{latitude}, \texttt{longitude}: campi opzionali che salvano la posizione in cui il trasfermento è avvenuto.
+    \item \texttt{isSynced}: flag presente solamente nel DB locale che indica se l'entry è già stata inviata al backend.
+\end{itemize}
+
+\subsubsection*{Persistenza remota -- MongoDB}
+
+Nel backend sono presenti 3 collection MongoDB:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{users}: un documento per dispositivo registrato, contenente lo \texttt{user\_id} (UUID) e il timestamp \texttt{created\_at}.
+
+    \item \texttt{transfers}: un documento per trasferimento, ha gli stessi campi di \texttt{HistoryEntity} locale (escluso \texttt{isSynced}) più \texttt{user\_id} per indicarne il proprietario e \texttt{group\_code} opzionale.
+
+    \item \texttt{groups}: un documento per gruppo, con un codice alfanumerico di 6 caratteri generato casualmente e un array \texttt{members} contenente gli \texttt{user\_id} dei partecipanti. Una volta entrato in un gruppo, un dispositivo vedrà nella sua sezione history le transazioni degli altri dispositivi del gruppo. 
+\end{itemize}
+
+\subsection{Scelte progettuali}
+
+\subsubsection*{Design pattern}
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \textbf{Repository pattern}: Ogni repository (locale e backend) è nascosta grazie ad un'interfaccia: \texttt{DeviceRepository} e \texttt{HistoryRepository}. Grazie a questo layer di astrazione, i viewModel istanziano l'interfaccia e quindi non sanno i dettagli del database su cui stanno lavorando.  
+
+    \item \textbf{Strategy pattern}: \texttt{P2pManager} e \texttt{TransferManager} sono interfacce con implementazioni concrete (\texttt{WifiDirectP2pManager}, \texttt{SocketTransferManager}) iniettate da \texttt{AppContainer}. Questo layer di astrazione nasconde l'implementazione della metodologia di trasferimento dati dalla logica di business. Se per esempio si volesse implementare un nuovo metodo di trasferimento (es. Bluetooth)
+    per applicarla alla logica di business basterebbe cambiare l'injection in \texttt{AppContainer}. 
+
+    \item \textbf{Singleton}: Nel progetto si trovano due \texttt{object} Kotlin. \texttt{TransferSessionState} espone un flag condiviso \texttt{isTransferring} usato per coordinare \texttt{Incoming\-Transfer\-Watcher} e \texttt{Transfer\-Foreground\-Service} (il suo ruolo è approfondito nella sezione \hyperref[subsec:broadcast]{BroadcastReceiver}). \texttt{AppContainer} è anch'esso un singleton, descritto successivamente.
+
+    \item \textbf{Factory Method}: ogni schermata definisce una \texttt{viewModelFactory} che incapsula la logica di costruzione del proprio ViewModel, separandola dal codice che lo utilizza. Questo è necessario perché Compose non può costruire ViewModel con parametri arbitrari tramite il meccanismo di default; la factory fornisce al sistema le istruzioni su come creare l'istanza. Un esempio concreto in \texttt{HomeScreen}:
+
+\begin{codeblock}[language=Kotlin]
+private val HomeViewModelFactory = viewModelFactory {
+    initializer {
+        HomeViewModel(
+            AppContainer.deviceIdProvider,
+            AppContainer.deviceRepository,
+            AppContainer.historyRepository,
+        )
+    }
+}
+\end{codeblock}
+
+    \item \textbf{Dependency injection manuale}: \texttt{AppContainer} funge da injector, istanziando tutte le dipendenze principali (repository, client HTTP, database, manager P2P) e le fornisce ai ViewModel tramite le factory descritte sopra.
+\end{itemize}
+
+\subsubsection*{Composable}
+
+Un \textbf{Composable} è una funzione Kotlin annotata con \texttt{@Composable} che descrive una porzione dell'interfaccia utente in modo dichiarativo: invece che essere modifiata esplicitamente, la view intercetta e cambia a seconda dello stato corrente attraverso una recomposition.
+
+Lo stato può essere gestito a due livelli distinti:
+
+Lo \textbf{stato di ViewModel} (\texttt{StateFlow}) è usato per dati che devono sopravvivere alle recomposition, alle rotazioni di schermo e che provengono dalla logica di business.
+
+Lo \textbf{stato interno al Composable} viene gestito con \texttt{remember \{ mutableStateOf(...) \}}. E' usato per dati esclusivamente visivi di cui non è richiesta la sopravvivenza alla recomposition. Un esempio concreto all'interno del progetto è il seguente:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item le \texttt{HistoryCard} all'interno della schermata di History usano \texttt{var expanded by remember \{ mutableStateOf(false) \}} per tracciare il loro stato, che può essere espanso o collassato.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \begin{minipage}[c]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{card_history_collapsed.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[c]{0.42\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{card_history_expanded.png}
+    \end{minipage}
+    \caption{HistoryCard collassata (sinistra) ed espansa (destra)}
+\end{figure}
+
+\subsubsection*{Coroutines}
+
+Le operazioni asincrone (chiamate di rete, I/O su disco, trasferimento file) sono gestite tramite coroutine.
+Nei ViewModel le coroutine vengono lanciate in \texttt{viewModelScope}, che le annulla automaticamente quando il ViewModel viene distrutto.\\
+Un utilizzo più avanzato delle coroutine si ha nella funzione \texttt{observePeers} utilizzata al momento della discovery dei dispositivi nelle vicinanze dove l'API di WiFi-Direct, basata su callback, viene adattata a un \texttt{Flow} Kotlin:
+
+\begin{codeblock}[language=Kotlin]
+override fun observePeers(): Flow<List<PeerDevice>> = callbackFlow {
+    val receiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION)
+                requestPeers()
+        }
+    }
+    ContextCompat.registerReceiver(context, receiver, IntentFilter(...), ...)
+    awaitClose { context.unregisterReceiver(receiver) }
+}
+\end{codeblock}
+
+\subsubsection*{BroadcastReceiver e Wi-Fi Direct}%
+\label{subsec:broadcast}
+
+L'API Wi-Fi Direct notifica gli eventi di rete tramite \textbf{Broad\-cast\-Receiver}. In \texttt{Wifi\-Direct\-P2p\-Manager} vengono registrati due receiver:
+
+\begin{itemize}[label={--}, leftmargin=1.2cm]
+    \item \texttt{WIFI\_P2P\_PEERS\_CHANGED\_ACTION}: inviato dal sistema quando la lista dei dispositivi vicini cambia; alla ricezione viene richiesta la lista aggiornata e inviata al Flow.
+    \item \texttt{WIFI\_P2P\_CONNECTION\_CHANGED\_ACTION}: inviato quando lo stato della connessione P2P cambia; alla ricezione vengono richieste le informazioni sul gruppo formato (indirizzo del group owner, ruolo del dispositivo).
+\end{itemize}
+
+\texttt{Incoming\-Transfer\-Watcher} osserva il Flow di \texttt{observeConnectionInfo()} in una coroutine con scope dedicato e, quando rileva una nuova connessione P2P, avvia il \texttt{Transfer\-Foreground\-Service} in modalità ricezione. Tuttavia il broadcast \texttt{WIFI\_P2P\_CONNECTION\_CHANGED\_ACTION} viene ricevuto da entrambi i dispositivi coinvolti nella connessione, incluso il mittente. Per evitare che il mittente avvii erroneamente una sessione di ricezione, \texttt{Incoming\-Transfer\-Watcher} controlla il flag \texttt{Transfer\-Session\-State.isTransferring} prima di procedere: se il dispositivo ha già avviato un trasferimento, il flag è \texttt{true} e il servizio non viene avviato.
+
+\subsubsection*{Foreground Service}
+
+Il trasferimento file avviene al di fuori del ciclo di vita di Activity e ViewModel, in un \textbf{Foreground Service} (\texttt{TransferForegroundService}). Questa scelta è necessaria perché il trasferimento può durare diversi secondi e deve continuare anche se l'utente naviga fuori dalla schermata. Android richiede che un servizio in primo piano mostri una \textbf{notifica persistente} per tutta la durata dell'operazione, in modo che l'utente sia consapevole dell'attività in corso.

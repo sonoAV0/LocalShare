@@ -1,0 +1,58 @@
+\section{Requisiti e installazione}
+\label{sec:requisiti}
+
+\subsection{Requisiti di sistema}
+
+Questa applicazione è stata realizzata in \textbf{Kotlin},
+utilizza un database non relazionale \textbf{MongoDB},
+un WebService \textbf{Flask} lato server e un client \textbf{Retrofit}
+con \textbf{kotlinx.serialization} per il parsing delle risposte JSON.
+Il backend (Flask + MongoDB) è containerizzato tramite \textbf{Docker Compose}.
+I requisiti minimi per eseguire l'applicazione sono:
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Dispositivo Android con supporto Wi-Fi Direct:} a partire da Android 16 (API Level 36)
+    \item \textbf{Android Studio:} IDE per la build e l'installazione dell'app sul dispositivo
+    \item \textbf{Docker Desktop:} necessario per avviare i container del backend tramite \texttt{docker compose up}
+    \item \textbf{MongoDB Compass} \emph{(opzionale)}: GUI per MongoDB, utile per visualizzare i dati salvati nel database
+    \item \textbf{Connessione Internet} \emph{(opzionale)}: richiesta per la sincronizzazione della history e la condivisione di essa con un gruppo di device
+\end{itemize}
+
+\subsection{Guida all'installazione}
+
+Il progetto può essere ottenuto scaricando e decomprimendo la cartella \texttt{.zip} fornita, oppure clonando la repository GitHub:
+
+\begin{codeblock}[language=bash]
+git clone https://github.com/sonoAv0/LocalShare.git
+\end{codeblock}
+
+\subsubsection*{Avvio del backend}
+
+Dalla directory radice del progetto, avviare i container Docker con:
+
+\begin{codeblock}[language=bash]
+docker compose up --build
+\end{codeblock}
+
+Il comando avvia due container: il WebService Flask (porta \texttt{5000}) e il database MongoDB. Al termine dell'operazione il backend è raggiungibile all'indirizzo \texttt{http://localhost:5000}.
+
+\subsubsection*{Installazione dell'app Android}
+
+Aprire la directory del progetto in Android Studio, collegare un dispositivo Android fisico con il debug USB abilitato oppure avviare un emulatore, quindi eseguire il build e l'installazione tramite il pulsante \emph{Run}. In alternativa, è possibile installare direttamente il file \texttt{localshare.apk} incluso nella directory radice del progetto tramite \texttt{adb}:
+
+\begin{codeblock}[language=bash]
+adb install localshare.apk
+\end{codeblock}
+
+\subsubsection*{Configurazione dell'indirizzo del backend}
+
+L'URL del backend è definito dalla costante \texttt{BACKEND\_BASE\_URL} nel file \texttt{AppContainer.kt}.
+
+Il valore predefinito \texttt{http://10.0.2.2:5000/} è valido esclusivamente per l'emulatore Android, che utilizza quell'indirizzo speciale per raggiungere il \texttt{localhost} della macchina host. In caso di utilizzo su \textbf{dispositivo fisico}, è necessario sostituirlo con l'indirizzo IP della macchina nella rete locale:
+
+\begin{codeblock}[language=Kotlin]
+private const val BACKEND_BASE_URL = "http://192.168.1.X:5000/"
+\end{codeblock}
+
+L'IP della macchina host si ottiene eseguendo \texttt{ipconfig} su Windows o \texttt{ip a} su Linux/macOS. Il dispositivo fisico e la macchina host devono essere connessi alla stessa rete.
+
